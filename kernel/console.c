@@ -25,6 +25,8 @@
 #define BACKSPACE 0x100
 #define C(x)  ((x)-'@')  // Control-x
 
+#define MAX_HISTORY 16
+
 //
 // send one character to the uart.
 // called by printf(), and to echo input characters,
@@ -51,6 +53,14 @@ struct {
   uint w;  // Write index
   uint e;  // Edit index
 } cons;
+
+struct {
+  char bufferArray[MAX_HISTORY][INPUT_BUF_SIZE];
+  uint lengthsArray[MAX_HISTORY];
+  uint lastCommandIndex;
+  int numOfCommandsInMemory;
+  int currentHistory;
+} historyBufferArray;
 
 //
 // user write()s to the console go here.
