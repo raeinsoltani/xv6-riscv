@@ -98,3 +98,30 @@ sys_history()
   history(historyarg);
   return 0;
 }
+
+uint64 
+sys_top() {
+    struct top *info_ptr;  // Renamed variable
+    struct top kernel_info;  // More descriptive variable name
+    struct proc *current_proc;  // Renamed and moved variable declaration
+
+    // Getting argument address
+    argaddr(0, (uint64 *)&info_ptr);
+
+    // Assigning current process
+    current_proc = myproc();
+
+    // Copy data from user space to kernel space
+    copyin(current_proc->pagetable, (char *)info_ptr, (uint64)&kernel_info, sizeof(kernel_info));
+
+    // Locking and running top function
+    acquire(&tickslock);
+    top(&kernel_info);
+    release(&tickslock);
+
+    // Copy data back from kernel space to user space
+    copyout(current_proc->pagetable, (uint64)info_ptr, (char *)&kernel_info, sizeof(kernel_info));
+
+    // Returning status
+    return 0;
+}

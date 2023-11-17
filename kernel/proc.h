@@ -1,3 +1,5 @@
+#include "param.h"
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -104,4 +106,19 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+};
+
+struct proc_info {
+  char name[16];
+  int pid;
+  int ppid;
+  enum procstate state;
+};
+
+struct top {
+  long uptime;
+  int total_process;
+  int running_process;
+  int sleeping_process;
+  struct proc_info p_list[NPROC];
 };

@@ -1,4 +1,24 @@
+#include "kernel/types.h"
+
 struct stat;
+struct proc_info;
+
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
+struct proc_info {
+    char name[16];
+    int pid;
+    int ppid;
+    enum procstate state;
+};
+
+struct top {
+    long uptime;
+    int total_process;
+    int running_process;
+    int sleeping_process;
+    struct proc_info p_list[64];
+};
 
 // system calls
 int fork(void);
@@ -23,6 +43,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 void history(int);
+void top(struct top*);
 
 // ulib.c
 int stat(const char*, struct stat*);

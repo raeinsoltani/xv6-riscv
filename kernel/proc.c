@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "stddef.h"
 
 struct cpu cpus[NCPU];
 
@@ -685,4 +686,38 @@ procdump(void)
 void
 history(int historyarg){
   history_get(historyarg);
+}
+
+void 
+top(struct top *input_pointer) {
+    input_pointer->total_process = nextpid - 1;
+    int count_sleeping = 0;
+    int count_running = 0;
+    int idx = 0;
+
+    while(idx < nextpid - 1) {
+        input_pointer->p_list[idx].pid = proc[idx].pid;
+        if(proc[idx].parent != NULL)
+            input_pointer->p_list[idx].ppid = proc[idx].parent->pid;
+        else
+            input_pointer->p_list[idx].ppid = 0;
+
+        int i = 0;
+        while(i < 16) {
+            input_pointer->p_list[idx].name[i] = proc[idx].name[i];
+            i++;
+        }
+
+        input_pointer->p_list[idx].state = proc[idx].state;
+
+        if(proc[idx].state == SLEEPING)
+            count_sleeping++;
+        else if(proc[idx].state == RUNNING)
+            count_running++;
+
+        idx++; 
+    }
+
+    input_pointer->running_process = count_running;
+    input_pointer->sleeping_process = count_sleeping;
 }
