@@ -27,6 +27,8 @@
 
 #define MAX_HISTORY 16
 
+uint ARROW_FLAG = 0;
+
 //
 // send one character to the uart.
 // called by printf(), and to echo input characters,
@@ -136,6 +138,64 @@ consoleread(int user_dst, uint64 dst, int n)
   return target - n;
 }
 
+void
+history_reset_if_full(){
+  if((historyBufferArray.lastCommandIndex) == MAX_HISTORY){
+      historyBufferArray.lastCommandIndex = 0;
+  }
+}
+
+void
+history_add(){
+  historyBufferArray.currentHistory = -1;
+  int char_index = 0;
+  history_reset_if_full();
+  for(int index = (cons.r);index < ((cons.w) - 1);index++)
+      historyBufferArray.bufferArray[historyBufferArray.lastCommandIndex][char_index++] = cons.buf[index];
+  historyBufferArray.lengthsArray[historyBufferArray.lastCommandIndex] = char_index;
+  historyBufferArray.lastCommandIndex++;
+  if ((historyBufferArray.numOfCommandsInMemory) != MAX_HISTORY){
+    historyBufferArray.numOfCommandsInMemory++;
+  }
+}
+
+uint
+history_add_condition(){
+  char history_command[7] = "history";
+  int temp_index = 0;
+  for (int index = (cons.r);index < (cons.r) + 7 ;index++){
+      if(history_command[temp_index] != cons.buf[index])
+          return 1;
+      temp_index++;
+  }
+  return 0;
+}
+
+uint
+history_get(uint historyarg){
+  if (historyarg > historyBufferArray.lastCommandIndex){
+    printf("Invalid argument for history funciton!\n");
+    return 1;
+  }
+  for (uint i = 0; i <= historyBufferArray.lastCommandIndex; i++)
+  {
+    printf("%s\n", historyBufferArray.bufferArray[i]);
+  }  
+  printf("Your requested function is %s \n", historyBufferArray.bufferArray[historyarg]);
+  return 0;
+}
+
+void
+arrow_command(){
+  release(&cons.lock);
+  if((historyBufferArray.currentHistory >= 0) && (historyBufferArray.currentHistory <= historyBufferArray.lastCommandIndex)){
+      for(int index = 0;index <= INPUT_BUF_SIZE;index++)
+          consoleintr(127);
+      for(int index = 0;index < historyBufferArray.lengthsArray[historyBufferArray.currentHistory];index++)
+          consoleintr(historyBufferArray.bufferArray[historyBufferArray.currentHistory][index]);
+  }
+}
+
 //
 // the console input interrupt handler.
 // uartintr() calls this for input character.
@@ -143,50 +203,80 @@ consoleread(int user_dst, uint64 dst, int n)
 // wake up consoleread() if a whole line has arrived.
 //
 void
-consoleintr(int c)
-{
+consoleintr(int c) {
   acquire(&cons.lock);
 
-  switch(c){
-  case C('P'):  // Print process list.
-    procdump();
-    break;
-  case C('U'):  // Kill line.
-    while(cons.e != cons.w &&
-          cons.buf[(cons.e-1) % INPUT_BUF_SIZE] != '\n'){
-      cons.e--;
-      consputc(BACKSPACE);
-    }
-    break;
-  case C('H'): // Backspace
-  case '\x7f': // Delete key
-    if(cons.e != cons.w){
-      cons.e--;
-      consputc(BACKSPACE);
-    }
-    break;
-  default:
-    if(c != 0 && cons.e-cons.r < INPUT_BUF_SIZE){
-      c = (c == '\r') ? '\n' : c;
+  switch (c) {
+      case C('P'):  // Print process list.
+          procdump();
+          break;
+      case C('U'):  // Kill line.
+          while (cons.e != cons.w &&
+                  cons.buf[(cons.e - 1) % INPUT_BUF_SIZE] != '\n') {
+              cons.e--;
+              consputc(BACKSPACE);
+          }
+          break;
+      case C('H'): // Backspace
+      case '\x7f': // Delete key
+          if (cons.e != cons.w) {
+              cons.e--;
+              consputc(BACKSPACE);
+          }
+          break;
+      case 27:
+          ARROW_FLAG = 1;
+          break;
+      default:
+          if (c != 0 && cons.e - cons.r < INPUT_BUF_SIZE) {
+            c = (c == '\r') ? '\n' : c;
 
-      // echo back to the user.
-      consputc(c);
+            if((c == 65) && (ARROW_FLAG)){
+              if(historyBufferArray.currentHistory == -1)
+                  historyBufferArray.currentHistory = historyBufferArray.lastCommandIndex;
+              else if(historyBufferArray.currentHistory != 0){
+                      historyBufferArray.currentHistory--;
+              }
+              arrow_command();
+              ARROW_FLAG = 0;
+              return;
+            }
+            else if((c == 66) && (ARROW_FLAG)){
+              if(historyBufferArray.currentHistory == -1){
+                historyBufferArray.currentHistory = 0;
+              }
+              else{
+                if(historyBufferArray.currentHistory != historyBufferArray.lastCommandIndex) {
+                    historyBufferArray.currentHistory++;
+                }
+              }
+              arrow_command();
+              ARROW_FLAG = 0;
+              return;
+            }
 
-      // store for consumption by consoleread().
-      cons.buf[cons.e++ % INPUT_BUF_SIZE] = c;
+            else if (!((c == 91) && (ARROW_FLAG))){
+                // echo back to the user.
+                consputc(c);
 
-      if(c == '\n' || c == C('D') || cons.e-cons.r == INPUT_BUF_SIZE){
-        // wake up consoleread() if a whole line (or end-of-file)
-        // has arrived.
-        cons.w = cons.e;
-        wakeup(&cons.r);
-      }
-    }
-    break;
+                // store for consumption by consoleread().
+                cons.buf[cons.e++ % INPUT_BUF_SIZE] = c;
+
+                if (c == '\n' || c == C('D') || cons.e - cons.r == INPUT_BUF_SIZE) {
+                    // wake up consoleread() if a whole line (or end-of-file)
+                    // has arrived.
+                    cons.w = cons.e;
+                    wakeup(&cons.r);
+                    if(history_add_condition())
+                        history_add();
+                }
+            }
+          }
+          break;
   }
-  
   release(&cons.lock);
 }
+
 
 void
 consoleinit(void)

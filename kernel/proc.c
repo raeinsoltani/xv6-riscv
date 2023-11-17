@@ -684,5 +684,5 @@ procdump(void)
 
 void
 history(int historyarg){
-  printf("This is a Test for history");
+  history_get(historyarg);
 }
