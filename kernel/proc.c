@@ -681,3 +681,8 @@ procdump(void)
     printf("\n");
   }
 }
+
+void
+history(int historyarg){
+  printf("This is a Test for history");
+}

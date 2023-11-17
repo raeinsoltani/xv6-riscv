@@ -89,3 +89,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_history()
+{
+  int historyarg;
+  argint(0, &historyarg);
+  history(historyarg);
+  return 0;
+}
