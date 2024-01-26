@@ -106,6 +106,14 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
+$U/_uthreadlib: $U/uthreadlib.o $(ULIB)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_uthreadlib $U/uthreadlib.o $U/ulib.o $U/usys.o
+	$(OBJDUMP) -S $U/_uthreadlib > $U/uthreadlib.asm
+
+$U/_uthreadlib: $U/uthreadlib.o $U/USwtch.o $(ULIB)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_uthreadlib $U/uthreadlib.o $U/USwtch.o $(ULIB)
+	$(OBJDUMP) -S $U/_uthreadlib > $U/uthreadlib.asm
+
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
 
@@ -134,6 +142,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_history\
 	$U/_top\
+	$U/_uthreadlib\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
