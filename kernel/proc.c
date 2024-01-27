@@ -445,30 +445,87 @@ wait(uint64 addr)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *selected = 0;
+  struct proc *p = proc;
   struct cpu *c = mycpu();
-  
+
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+    for (int i = 0; i < NPROC; i++) {
+        if (p >= proc + NPROC) {
+            p = proc;
+        }
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+      if(p->state == RUNNABLE) {
+        if(!selected){
+          selected = p;
+        }
+        else if(p->priority > selected->priority){
+          selected = p;
+        }
+        else if(p->priority == selected->priority && p->queue < selected->queue){
+          selected = p;
+        }
       }
-      release(&p->lock);
+      p++;
     }
+
+    if (selected != 0) {
+      p = selected;
+      acquire(&p->lock);
+      if(p->state != RUNNABLE) {
+          release(&p->lock);
+          continue;
+      }
+
+      uint64 tick;
+      if (p->queue == 0) {
+        if (strncmp("schtest", p->name, 7) == 0) {
+            printf("context switch to queue 1, pid: %d\n", p->pid);
+        }
+          tick = 1000000;
+          p->queue++;
+      } else if (p->queue == 1) {
+          if (strncmp("schtest", p->name, 7) == 0) {
+              printf("context switch to queue 2, pid: %d\n", p->pid);
+          }
+          tick = 2000000;
+          p->queue++;
+      } else {
+          if (strncmp("schtest", p->name, 7) == 0) {
+              printf("context switch to queue 3, pid: %d\n", p->pid);
+          }
+          tick = 4000000;
+      }
+      set_timer_tick(cpuid(), tick);
+
+      if (strncmp("schtest", p->name, 7) == 0) {
+          printf("Proccess entered scheduler, pid: %d \n", p->pid);
+      }
+
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+
+      
+      if (strncmp("schtest", p->name, 7) == 0) {
+          printf("Proccess done with scheduler, pid: %d \n", p->pid);
+      }
+
+      c->proc = 0;
+      release(&p->lock);
+      selected = 0;
+      p++;
+    } 
   }
 }
 

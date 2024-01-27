@@ -125,3 +125,13 @@ sys_top() {
   // Returning status
   return 0;
 }
+
+uint64
+sys_setprio(void)
+{
+  int priority;
+
+  argint(0, &priority);
+  myproc()->priority = priority;
+  return 0;
+}

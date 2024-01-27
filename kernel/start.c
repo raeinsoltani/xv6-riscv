@@ -87,3 +87,9 @@ timerinit()
   // enable machine-mode timer interrupts.
   w_mie(r_mie() | MIE_MTIE);
 }
+
+void
+set_timer_tick(int cpu_id, uint64 tick) {
+    uint64 *scratch = &timer_scratch[cpu_id][0];
+    scratch[4] = tick;
+}

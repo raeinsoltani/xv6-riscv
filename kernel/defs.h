@@ -195,3 +195,6 @@ void            top(struct top* input_pointer);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// start.c
+void            set_timer_tick(int, uint64);

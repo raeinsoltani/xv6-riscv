@@ -44,6 +44,7 @@ int sleep(int);
 int uptime(void);
 void history(int);
 void top(struct top*);
+void setprio(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
